@@ -1,0 +1,65 @@
+---
+source: tests/xml-with-placeholders/main.rs
+assertion_line: 29
+expression: xml
+---
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<w:document
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        mc:Ignorable="w14 wp14">
+    <w:body>
+        <!-- single run paragraph -->
+        <w:p>
+            <w:r>
+                <w:t>[1][1]</w:t>
+            </w:r>
+            <w:r>
+                <!-- something other than a <w:t> -->
+            </w:r>
+        </w:p>
+        <!-- multi run paragraph -->
+        <w:p>
+            <w:r>
+                <w:t></w:t>
+            </w:r>
+            <w:r>
+                <w:t>[2]</w:t>
+            </w:r>
+            <w:r>
+                <w:t>{yet-another</w:t>
+            </w:r>
+        </w:p>
+        <w:p>
+            <w:r/>
+            <w:r>
+                <w:t>-placeholder}</w:t>
+            </w:r>
+            <w:r>
+                <w:rPr>
+                    <w:color w:val="ff0000"/>
+                </w:rPr>
+                <w:t xml:space="preserve">[3] </w:t>
+            </w:r>
+        </w:p>
+        <!-- deeply nested run -->
+        <here>
+            <are>
+                <just>
+                    <some>
+                        <more>
+                            <tags>
+                                <w:r>
+                                    <w:t>{some</w:t>
+                                </w:r>
+                                <w:r>
+                                    <w:t>_placeholder}</w:t>
+                                </w:r>
+                            </tags>
+                        </more>
+                    </some>
+                </just>
+            </are>
+        </here>
+    </w:body>
+</w:document>
