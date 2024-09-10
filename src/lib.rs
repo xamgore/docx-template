@@ -1,5 +1,7 @@
 #[macro_use]
 mod regex;
+
+#[cfg(feature = "docx-rust")]
 mod doc_layout_node;
 pub mod docx_file;
 mod docx_part;
