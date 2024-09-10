@@ -46,7 +46,7 @@ impl<R: io::Read + io::Seek> DocxTemplate<R> {
   ) -> Result<W, DocxTemplateError> {
     let mut result = zip::ZipWriter::new(writer);
 
-    let _comments = self.extract_comments();
+    // let _comments = self.extract_comments();
 
     // TODO: The code below is just a bad written visitor pattern,
     //       where we stream each file to the TemplateEngine transformer.
@@ -79,6 +79,7 @@ impl<R: io::Read + io::Seek> DocxTemplate<R> {
     Ok(result.finish()?)
   }
 
+  #[cfg(feature = "docx-rust")]
   fn extract_comments(&mut self) -> HashMap<String, isize> {
     let mut part = match self.template.archive.by_name(DocxPartType::comments()) {
       Ok(part) => part,
@@ -90,7 +91,7 @@ impl<R: io::Read + io::Seek> DocxTemplate<R> {
 
     use hard_xml::XmlRead;
     let Ok(def) = docx_rust::document::Comments::from_str(&buf) else { panic!() };
-
+    
     def
       .comments
       .into_iter()

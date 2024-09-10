@@ -1,6 +1,8 @@
 use serde_json::Value;
 use std::borrow::Cow;
 use itertools::Itertools;
+
+#[cfg(feature = "docx-rust")]
 use crate::doc_layout_node::DocLayoutNode;
 
 #[derive(Debug, Clone)]
@@ -27,6 +29,7 @@ impl<'s> Replacement<'s> {
     ))
   }
 
+  #[cfg(feature = "docx-rust")]
   pub fn from_layout_node(node: DocLayoutNode<'_>) -> Self {
     let xml = match node {
       DocLayoutNode::InBody(_) => {
@@ -50,6 +53,7 @@ impl<'s> From<&'s str> for Replacement<'s> {
   }
 }
 
+#[cfg(feature = "docx-rust")]
 impl<'s> From<DocLayoutNode<'_>> for Replacement<'s> {
   fn from(value: DocLayoutNode<'_>) -> Self {
     Self::from_layout_node(value)
