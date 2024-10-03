@@ -1,15 +1,17 @@
 use std::io;
 use std::ops::Range;
 
+use crate::transformers::TransformerError;
 use aho_corasick::Anchored;
 use quick_xml::events::Event;
-use crate::transformers::TransformerError;
 
-pub use self::patterns::Patterns;
-pub use self::replacement::Replacement;
+pub use self::placeholders::Placeholders;
+pub use self::replacements::Replacements;
+pub use self::value::Value;
 
-mod patterns;
-mod replacement;
+mod placeholders;
+mod replacements;
+mod value;
 
 // TODO: Consider implementing `io::Read` to enable dynamic placeholder replacement during reading.
 //       It would simplify transformer down to its variant ReadXmlError.
@@ -17,9 +19,10 @@ mod replacement;
 //       let reader = quick_xml::Reader::from_reader(BufReader::new(file));
 //       dbg!(reader.read_event_into(&mut buf));
 
+#[derive(Debug, Default, Clone)]
 pub struct FindAndReplaceTransformer<'r> {
-  pub patterns: Patterns,
-  pub replacements: &'r [Replacement<'r>],
+  pub placeholders: Placeholders,
+  pub replacements: Replacements<'r>,
 }
 
 impl<'subs> FindAndReplaceTransformer<'subs> {
@@ -77,7 +80,7 @@ impl<'subs> FindAndReplaceTransformer<'subs> {
     spans: &[Range<usize>],
     mut reported: usize,
   ) -> io::Result<usize> {
-    let Ok(start) = self.patterns.automaton.start_state(Anchored::No) else {
+    let Ok(start) = self.placeholders.automaton.start_state(Anchored::No) else {
       unreachable!("aho-corasick automaton misconfiguration");
     };
     let mut sid = start;
@@ -89,13 +92,13 @@ impl<'subs> FindAndReplaceTransformer<'subs> {
 
       // span's space offset
       for (offset, byte) in input.as_ref()[span.clone()].iter().copied().enumerate() {
-        sid = self.patterns.automaton.next_state(Anchored::No, sid, byte);
-        if !self.patterns.automaton.is_match(sid) {
+        sid = self.placeholders.automaton.next_state(Anchored::No, sid, byte);
+        if !self.placeholders.automaton.is_match(sid) {
           continue;
         }
 
-        let pat_id = self.patterns.automaton.match_pattern(sid, 0);
-        let pat_len = self.patterns.automaton.pattern_len(pat_id);
+        let pat_id = self.placeholders.automaton.match_pattern(sid, 0);
+        let pat_len = self.placeholders.automaton.pattern_len(pat_id);
         sid = start;
 
         let r#match = Range { start: (offset + 1).saturating_sub(pat_len), end: offset + 1 };
@@ -127,7 +130,7 @@ impl<'subs> FindAndReplaceTransformer<'subs> {
         out.write_all(&input.as_ref()[reported..(span.start + r#match.start)])?;
 
         let replacement = match &self.replacements[pat_id.as_usize()] {
-          Replacement::Xml(xml) => xml.as_bytes(),
+          Value::Xml(xml) => xml.as_bytes(),
         };
         out.write_all(replacement)?;
         reported = span.start + r#match.end;
@@ -143,11 +146,13 @@ mod tests {
   use super::*;
 
   fn run<const T: usize>(subs: [(&str, &str); T], input: &str) -> String {
-    let patterns = Patterns::from_iter(subs.into_iter().map(|(pattern, _)| pattern));
-    let replacements = subs.map(|(_, s)| s).map(Replacement::from_text);
-    let buf = FindAndReplaceTransformer { patterns, replacements: replacements.as_slice() }
-      .transform_stream(input, Vec::new())
-      .unwrap();
+    let replacements = subs.map(|(_, s)| s).map(Value::from_text);
+    let buf = FindAndReplaceTransformer {
+      placeholders: Placeholders::from_iter(subs.into_iter().map(|(pattern, _)| pattern)),
+      replacements: Replacements::from_slice(replacements.as_slice()),
+    }
+    .transform_stream(input, Vec::new())
+    .unwrap();
     String::from_utf8(buf).unwrap()
   }
 

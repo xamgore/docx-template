@@ -1,4 +1,3 @@
-use serde_json::Value;
 use std::borrow::Cow;
 use itertools::Itertools;
 
@@ -6,7 +5,7 @@ use itertools::Itertools;
 use crate::doc_layout_node::DocLayoutNode;
 
 #[derive(Debug, Clone)]
-pub enum Replacement<'s> {
+pub enum Value<'s> {
   Xml(Cow<'s, str>),
   // todo: "dynamic values" — functions returning a value, needs real-life use cases though
   // todo: images, as they require records in index files
@@ -15,7 +14,7 @@ pub enum Replacement<'s> {
   //       https://web.archive.org/web/20220627000043/http://officeopenxml.com/drwPic.php
 }
 
-impl<'s> Replacement<'s> {
+impl<'s> Value<'s> {
   pub fn from_xml<I: Into<Cow<'s, str>>>(xml: I) -> Self {
     Self::Xml(xml.into())
   }
@@ -33,7 +32,7 @@ impl<'s> Replacement<'s> {
   pub fn from_layout_node(node: DocLayoutNode<'_>) -> Self {
     let xml = match node {
       DocLayoutNode::InBody(_) => {
-        // this may not work as expected, as {placeholder} can reside at a table, not in the body
+        // todo: this may not work as expected, as {placeholder} can reside at a table, not in the body
         format!("</w:t></w:r></w:p>{node}<w:p><w:r><w:t>")
       }
       DocLayoutNode::InParagraph(_) => {
@@ -47,25 +46,36 @@ impl<'s> Replacement<'s> {
   }
 }
 
-impl<'s> From<&'s str> for Replacement<'s> {
+impl<'s> From<&'s str> for Value<'s> {
   fn from(value: &str) -> Self {
     Self::from_text(value)
   }
 }
 
 #[cfg(feature = "docx-rust")]
-impl<'s> From<DocLayoutNode<'_>> for Replacement<'s> {
+impl<'s> From<DocLayoutNode<'_>> for Value<'s> {
   fn from(value: DocLayoutNode<'_>) -> Self {
     Self::from_layout_node(value)
   }
 }
 
-impl<'s> From<Value> for Replacement<'s> {
-  fn from(value: Value) -> Self {
+impl<'s> From<serde_json::Value> for Value<'s> {
+  fn from(value: serde_json::Value) -> Self {
     match value {
-      Value::Null => Replacement::Xml(Cow::default()),
-      Value::String(v) => Replacement::from_text(&v),
-      Value::Number(v) => Replacement::from_text(&v.to_string()),
+      serde_json::Value::Null => Value::Xml(Cow::default()),
+      serde_json::Value::String(v) => Value::from_text(&v),
+      serde_json::Value::Number(v) => Value::from_text(&v.to_string()),
+      _ => unimplemented!(),
+    }
+  }
+}
+
+impl<'s> From<&'s serde_json::Value> for Value<'s> {
+  fn from(value: &'s serde_json::Value) -> Self {
+    match value {
+      serde_json::Value::Null => Value::Xml(Cow::default()),
+      serde_json::Value::String(v) => Value::from_text(v.as_str()),
+      serde_json::Value::Number(v) => Value::from_text(&v.to_string()),
       _ => unimplemented!(),
     }
   }

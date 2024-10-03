@@ -4,7 +4,7 @@ use std::io::BufWriter;
 
 use docx_template::docx_file::DocxFile;
 use docx_template::docx_template::DocxTemplate;
-use docx_template::transformers::find_and_replace::{Patterns, Replacement};
+use docx_template::transformers::find_and_replace::{Placeholders, Replacements};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   let json = json!({
@@ -20,17 +20,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     "foo":                         "bar",
   });
 
-  let path = "./examples/template/input.docx";
   let mut template = DocxTemplate {
-    template: DocxFile::from_path(path)?,
-    patterns: Patterns::from_json_with_brackets("{", "}", &json),
+    template: DocxFile::from_path("./examples/template/input.docx")?,
+    patterns: Placeholders::from_json_keys_with_brackets("{", "}", &json),
   };
 
-  let path = "./examples/template/output.docx";
-  let mut result = BufWriter::new(File::create(path).unwrap());
-  let replacements: Vec<_> =
-    json.as_object().unwrap().values().cloned().map(Replacement::from).collect();
-  template.render(&mut result, &replacements)?;
+  let mut output = BufWriter::new(File::create("./examples/template/output.docx").unwrap());
+  template.render(&mut output, Replacements::from_json(&json))?;
 
   Ok(())
 }

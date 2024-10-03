@@ -3,7 +3,7 @@ use std::io::BufWriter;
 
 use docx_template::docx_file::DocxFile;
 use docx_template::docx_template::DocxTemplate;
-use docx_template::transformers::find_and_replace::{Patterns, Replacement};
+use docx_template::transformers::find_and_replace::{Placeholders, Replacements};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   let fields = Fields {
@@ -35,18 +35,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ..Default::default()
   };
 
-  let serde_json::Value::Object(map) = serde_json::to_value(fields)? else { panic!() };
-
-  let path = "./examples/table-markup/input.docx";
   let mut template = DocxTemplate {
-    template: DocxFile::from_path(path)?,
-    patterns: Patterns::from_iter_with_brackets("{", "}", map.keys()),
+    template: DocxFile::from_path("./examples/table-markup/input.docx")?,
+    patterns: Placeholders::from_struct_keys_with_brackets::<Fields>("{", "}")?,
   };
 
-  let path = "./examples/table-markup/output.docx";
-  let mut result = BufWriter::new(File::create(path).unwrap());
-  let replacements: Vec<_> = map.values().cloned().map(Replacement::from).collect();
-  template.render(&mut result, &replacements)?;
+  let mut result = BufWriter::new(File::create("./examples/table-markup/output.docx")?);
+  template.render(&mut result, Replacements::try_from_serializable(&fields)?)?;
 
   Ok(())
 }

@@ -4,22 +4,22 @@ use insta::assert_snapshot;
 
 use docx_template::docx_template::DocxTemplateError;
 use docx_template::transformers::find_and_replace::{
-  FindAndReplaceTransformer, Patterns, Replacement,
+  FindAndReplaceTransformer, Placeholders, Replacements,
 };
 
 #[test]
 fn test() -> Result<(), Box<dyn std::error::Error>> {
-  let patterns = Patterns::from_iter_with_brackets(
+  let placeholders = Placeholders::from_iter_with_brackets(
     "{",
     "}",
     ["single", "fragmented_placeholder", "foo_bar", "some_placeholder"],
   );
   let template = include_bytes!("input.xml");
 
-  let replacements = &["[1]", "[2]", "[3]", "[4]", "[5]"].map(Replacement::from);
+  let replacements = Replacements::from_iter(["[1]", "[2]", "[3]", "[4]", "[5]"]);
   let mut result = Cursor::new(Vec::new());
 
-  FindAndReplaceTransformer { patterns, replacements }
+  FindAndReplaceTransformer { placeholders, replacements }
     .transform_stream(template, &mut result)
     .map_err(DocxTemplateError::from)?;
 
