@@ -1,26 +1,36 @@
+use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
-use aho_corasick::{BuildError, dfa, nfa};
 use aho_corasick::automaton::Automaton;
+use aho_corasick::{dfa, nfa, BuildError};
 use serde::Serialize;
 
+/// Is used to pattern match `{placeholders}` in the incoming stream of bytes.
+///
+/// Should be _cached_ as construction is a resource intensive operation.
 #[derive(Clone)]
-pub struct Patterns {
+pub struct Placeholders {
   pub automaton: Arc<dyn Automaton>,
 }
 
-impl Default for Patterns {
+impl Default for Placeholders {
   fn default() -> Self {
     Self::from_iter::<&str, _>([])
   }
 }
 
-impl Patterns {
+impl Debug for Placeholders {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("Placeholders").finish()
+  }
+}
+
+impl Placeholders {
   /// Contains the automatic selection logic of the Aho-Corasick implementation to use.
   fn build<I, P>(patterns: I) -> Result<Arc<dyn Automaton>, BuildError>
-    where
-      I: IntoIterator<Item=P>,
-      P: AsRef<[u8]>,
+  where
+    I: IntoIterator<Item = P>,
+    P: AsRef<[u8]>,
   {
     let nfa = nfa::noncontiguous::Builder::default().build(patterns)?;
 
@@ -55,38 +65,36 @@ impl Patterns {
   }
 }
 
-impl Patterns {
-  /// Build patterns from an iterator.
+impl Placeholders {
+  /// Build placeholders from an iterator.
   ///
   /// ```rust
-  /// # use crate::docx_template::transformers::find_and_replace::Patterns;
-  /// Patterns::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
+  ///# use crate::docx_template::transformers::find_and_replace::Placeholders;
+  /// Placeholders::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
   /// ```
   #[allow(clippy::should_implement_trait)]
-  pub fn from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = P>>(
-    patterns: I,
-  ) -> Self {
+  pub fn from_iter<P: AsRef<[u8]>, I: IntoIterator<Item = P>>(placeholders: I) -> Self {
     // as it fails only on extreme values, we unwrap for better api
-    let automaton = Self::build(patterns).unwrap();
+    let automaton = Self::build(placeholders).unwrap();
     Self { automaton }
   }
 
-  /// Build patterns from an iterator.
+  /// Build placeholders from an iterator.
   ///
   /// ```rust
-  /// # use crate::docx_template::transformers::find_and_replace::Patterns;
-  /// Patterns::from_iter_with_brackets("{{", "}}",
+  ///# use crate::docx_template::transformers::find_and_replace::Placeholders;
+  /// Placeholders::from_iter_with_brackets("{{", "}}",
   ///   ["id", "price", "consumer_name", "seller_name"]);
   ///
   /// // same as
-  /// Patterns::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
+  /// Placeholders::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
   /// ```
   pub fn from_iter_with_brackets<P: AsRef<[u8]>, I: IntoIterator<Item = P>>(
     open_bracket: &str,
     close_bracket: &str,
-    patterns: I,
+    placeholders: I,
   ) -> Self {
-    let patterns = patterns.into_iter().map(|pattern| {
+    let placeholders = placeholders.into_iter().map(|pattern| {
       let mut new = Vec::with_capacity(
         open_bracket.as_bytes().len() + close_bracket.as_bytes().len() + pattern.as_ref().len(),
       );
@@ -95,13 +103,13 @@ impl Patterns {
       new.extend_from_slice(close_bracket.as_bytes());
       new
     });
-    Self::from_iter(patterns)
+    Self::from_iter(placeholders)
   }
 
-  /// Derive patterns from keys of a json object.
+  /// Derive placeholders from keys of a json object.
   ///
   /// ```rust
-  /// use docx_template::transformers::find_and_replace::Patterns;
+  ///# use docx_template::transformers::find_and_replace::Placeholders;
   /// use serde::Serialize;
   /// use serde_json::json;
   ///
@@ -112,22 +120,22 @@ impl Patterns {
   ///     "{{seller_name}}": "John Doe",
   /// });
   ///
-  /// Patterns::from_json(&value);
+  /// Placeholders::from_json_keys(&value);
   ///
   /// // same as
-  /// Patterns::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
+  /// Placeholders::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
   /// ```
-  pub fn from_json(value: &serde_json::Value) -> Self {
+  pub fn from_json_keys(value: &serde_json::Value) -> Self {
     match value {
-      serde_json::Value::Object(map) => Patterns::from_iter(map.keys()),
-      _ => Patterns::default(),
+      serde_json::Value::Object(map) => Placeholders::from_iter(map.keys()),
+      _ => Placeholders::default(),
     }
   }
 
-  /// Derive patterns from keys of a json object.
+  /// Derive placeholders from keys of a json object.
   ///
   /// ```rust
-  /// use docx_template::transformers::find_and_replace::Patterns;
+  ///# use docx_template::transformers::find_and_replace::Placeholders;
   /// use serde::Serialize;
   /// use serde_json::json;
   ///
@@ -138,28 +146,28 @@ impl Patterns {
   ///     "seller_name": "John Doe",
   /// });
   ///
-  /// Patterns::from_json_with_brackets("{{", "}}", &value);
+  /// Placeholders::from_json_keys_with_brackets("{{", "}}", &value);
   ///
   /// // same as
-  /// Patterns::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
+  /// Placeholders::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
   /// ```
-  pub fn from_json_with_brackets(
+  pub fn from_json_keys_with_brackets(
     open_bracket: &str,
     close_bracket: &str,
     value: &serde_json::Value,
   ) -> Self {
     match value {
       serde_json::Value::Object(map) => {
-        Patterns::from_iter_with_brackets(open_bracket, close_bracket, map.keys())
+        Placeholders::from_iter_with_brackets(open_bracket, close_bracket, map.keys())
       }
-      _ => Patterns::default(),
+      _ => Placeholders::default(),
     }
   }
 
-  /// Derive patterns from keys of a serializable `struct`.
+  /// Derive placeholders from keys of a serializable `struct`.
   ///
   /// ```rust
-  /// use docx_template::transformers::find_and_replace::Patterns;
+  ///# use docx_template::transformers::find_and_replace::Placeholders;
   /// use serde::Serialize;
   ///
   /// #[derive(Default, Serialize)]
@@ -174,19 +182,19 @@ impl Patterns {
   ///     seller: String,
   /// }
   ///
-  /// Patterns::from_definition::<Invoice>().unwrap();
+  /// Placeholders::from_struct_keys::<Invoice>().unwrap();
   ///
   /// // same as
-  /// Patterns::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
+  /// Placeholders::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
   /// ```
-  pub fn from_definition<D: Default + Serialize>() -> Result<Self, serde_json::Error> {
-    Ok(Self::from_json(&serde_json::to_value(D::default())?))
+  pub fn from_struct_keys<D: Default + Serialize>() -> Result<Self, serde_json::Error> {
+    Ok(Self::from_json_keys(&serde_json::to_value(D::default())?))
   }
 
-  /// Derive patterns from keys of a serializable `struct`.
+  /// Derive placeholders from keys of a serializable `struct`.
   ///
   /// ```rust
-  /// use docx_template::transformers::find_and_replace::Patterns;
+  ///# use docx_template::transformers::find_and_replace::Placeholders;
   /// use serde::Serialize;
   /// use serde_with::with_prefix;
   ///
@@ -208,34 +216,34 @@ impl Patterns {
   /// serde_with::with_prefix!(consumer_ "consumer_");
   /// serde_with::with_prefix!(seller_ "seller_");
   ///
-  /// Patterns::from_definition_with_brackets::<Invoice>("{{", "}}").unwrap();
+  /// Placeholders::from_struct_keys_with_brackets::<Invoice>("{{", "}}").unwrap();
   ///
   /// // same as
-  /// Patterns::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
+  /// Placeholders::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
   /// ```
-  pub fn from_definition_with_brackets<D: Default + Serialize>(
+  pub fn from_struct_keys_with_brackets<D: Default + Serialize>(
     open_bracket: &str,
     close_bracket: &str,
   ) -> Result<Self, serde_json::Error> {
     let json = serde_json::to_value(D::default())?;
-    Ok(Self::from_json_with_brackets(open_bracket, close_bracket, &json))
+    Ok(Self::from_json_keys_with_brackets(open_bracket, close_bracket, &json))
   }
 }
 
-impl<A: AsRef<[u8]>> FromIterator<A> for Patterns {
+impl<A: AsRef<[u8]>> FromIterator<A> for Placeholders {
   fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
-    Patterns::from_iter(iter)
+    Placeholders::from_iter(iter)
   }
 }
 
-impl<'a> From<&'a serde_json::Value> for Patterns {
+impl<'a> From<&'a serde_json::Value> for Placeholders {
   fn from(value: &'a serde_json::Value) -> Self {
-    Self::from_json(value)
+    Placeholders::from_json_keys(value)
   }
 }
 
-impl<'a> From<&'a serde_json::Map<String, serde_json::Value>> for Patterns {
+impl<'a> From<&'a serde_json::Map<String, serde_json::Value>> for Placeholders {
   fn from(map: &'a serde_json::Map<String, serde_json::Value>) -> Self {
-    Self::from_iter(map.keys())
+    Placeholders::from_iter(map.keys())
   }
 }

@@ -1,19 +1,19 @@
-use std::collections::HashMap;
 use std::io;
 
 use aho_corasick::BuildError;
-use hard_xml::XmlWrite;
 use thiserror::Error;
 use zip::result::ZipError;
 
 use crate::docx_file::DocxFile;
 use crate::docx_part::DocxPartType;
-use crate::transformers::find_and_replace::{FindAndReplaceTransformer, Patterns, Replacement};
+use crate::transformers::find_and_replace::{
+  FindAndReplaceTransformer, Placeholders, Replacements,
+};
 use crate::transformers::TransformerError;
 use crate::zip_file_ext::ZipFileExt;
 
 pub struct DocxTemplate<R> {
-  pub patterns: Patterns,
+  pub patterns: Placeholders,
   pub template: DocxFile<R>,
 }
 
@@ -42,7 +42,7 @@ impl<R: io::Read + io::Seek> DocxTemplate<R> {
   pub fn render<W: io::Write + io::Seek>(
     &mut self,
     writer: W,
-    replacements: &[Replacement],
+    replacements: Replacements<'_>,
   ) -> Result<W, DocxTemplateError> {
     let mut result = zip::ZipWriter::new(writer);
 
@@ -69,9 +69,12 @@ impl<R: io::Read + io::Seek> DocxTemplate<R> {
           let mut buf = String::new();
           io::Read::read_to_string(&mut part, &mut buf).map_err(ZipError::Io)?;
 
-          FindAndReplaceTransformer { patterns: self.patterns.clone(), replacements }
-            .transform_stream(buf.as_bytes(), &mut result)
-            .map_err(DocxTemplateError::from)?;
+          FindAndReplaceTransformer {
+            placeholders: self.patterns.clone(),
+            replacements: replacements.clone(),
+          }
+          .transform_stream(buf.as_bytes(), &mut result)
+          .map_err(DocxTemplateError::from)?;
         }
       }
     }
@@ -91,7 +94,7 @@ impl<R: io::Read + io::Seek> DocxTemplate<R> {
 
     use hard_xml::XmlRead;
     let Ok(def) = docx_rust::document::Comments::from_str(&buf) else { panic!() };
-    
+
     def
       .comments
       .into_iter()

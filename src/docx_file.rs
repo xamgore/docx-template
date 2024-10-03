@@ -1,4 +1,4 @@
-use crate::transformers::find_and_replace::{Patterns, Replacement};
+use crate::transformers::find_and_replace::{Placeholders, Replacements};
 use crate::zip_file_ext::ZipFileExt;
 use crate::{DocxTemplate, DocxTemplateError};
 use serde::Serialize;
@@ -9,7 +9,8 @@ use thiserror::Error;
 use zip::result::ZipError;
 use zip::ZipArchive;
 
-/// Docx file is essentially a zip archive containing various XML files (parts).
+/// Docx file is essentially a zip archive containing .xml files and images.
+///
 pub struct DocxFile<R> {
   pub(crate) archive: ZipArchive<R>,
   // todo: field with a decryption password
@@ -45,15 +46,10 @@ impl<R: io::Read + io::Seek> DocxFile<R> {
 
     let mut template = DocxTemplate {
       template: self,
-      patterns: Patterns::from_json_with_brackets(open_bracket, close_bracket, &data),
+      patterns: Placeholders::from_json_keys_with_brackets(open_bracket, close_bracket, &data),
     };
 
-    let replacements: Vec<_> = match data {
-      serde_json::Value::Object(map) => map.values().cloned().map(Replacement::from).collect(),
-      _ => Default::default(),
-    };
-
-    template.render(&mut writer, &replacements)?;
+    template.render(&mut writer, Replacements::from_json(&data))?;
     Ok(())
   }
 
