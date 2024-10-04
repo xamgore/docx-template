@@ -22,6 +22,7 @@ impl<'a> Replacements<'a> {
   }
 
   pub fn from_json(object: &'a JsonValue) -> Self {
+    debug_assert!(object.is_object(), "pass an object, as placeholders won't be replaced otherwise");
     match object.as_object() {
       Some(obj) => Self { values: obj.values().map(Value::from).collect() },
       None => Default::default(),
@@ -30,8 +31,9 @@ impl<'a> Replacements<'a> {
 }
 
 impl Replacements<'static> {
-  pub fn try_from_serializable(owned: &impl Serialize) -> Result<Self, serde_json::Error> {
-    let json = serde_json::to_value(owned)?;
+  pub fn try_from_serializable(val: &impl Serialize) -> Result<Self, serde_json::Error> {
+    let json = serde_json::to_value(val)?;
+    debug_assert!(json.is_object(), "pass an object, as placeholders won't be replaced otherwise");
     Ok(match json.as_object() {
       Some(obj) => Self { values: obj.values().cloned().map(Value::from).collect() },
       None => Default::default(),
