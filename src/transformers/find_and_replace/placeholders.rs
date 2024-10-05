@@ -5,12 +5,12 @@ use aho_corasick::automaton::Automaton;
 use aho_corasick::{dfa, nfa, BuildError};
 use serde::Serialize;
 
-/// Is used to pattern match `{placeholders}` in the incoming stream of bytes.
+/// Is used to pattern match `{placeholders}` against the incoming stream of bytes.
 ///
-/// Should be _cached_ as construction is a resource intensive operation.
+/// Should be _cached_ as construction is a resource intensive operation. Clone is cheap.
 #[derive(Clone)]
 pub struct Placeholders {
-  pub automaton: Arc<dyn Automaton>,
+  pub(crate) automaton: Arc<dyn Automaton>,
 }
 
 impl Default for Placeholders {
