@@ -1,9 +1,6 @@
 use std::fs::File;
-use std::io::BufWriter;
 
-use docx_template::docx_file::DocxFile;
-use docx_template::docx_template::DocxTemplate;
-use docx_template::transformers::find_and_replace::{Placeholders, Replacements};
+use docx_template::DocxFile;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   let fields = Fields {
@@ -35,13 +32,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ..Default::default()
   };
 
-  let mut template = DocxTemplate {
-    template: DocxFile::from_path("./examples/table-markup/input.docx")?,
-    patterns: Placeholders::from_struct_keys_with_brackets::<Fields>("{", "}")?,
-  };
-
-  let mut result = BufWriter::new(File::create("./examples/table-markup/output.docx")?);
-  template.render(&mut result, Replacements::try_from_serializable(&fields)?)?;
+  DocxFile::from_path("./examples/table-markup/input.docx")?
+    .into_template_having_brackets("{", "}", &fields)?
+    .render_to(File::create("./examples/table-markup/output.docx")?)?;
 
   Ok(())
 }

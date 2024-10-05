@@ -2,7 +2,8 @@ use std::borrow::Cow;
 use itertools::Itertools;
 
 #[cfg(feature = "docx-rust")]
-use crate::doc_layout_node::DocLayoutNode;
+use crate::markup_node::MarkupNode;
+
 
 #[derive(Debug, Clone)]
 pub enum Value<'s> {
@@ -29,16 +30,16 @@ impl<'s> Value<'s> {
   }
 
   #[cfg(feature = "docx-rust")]
-  pub fn from_layout_node(node: DocLayoutNode<'_>) -> Self {
+  pub fn from_layout_node(node: MarkupNode<'_>) -> Self {
     let xml = match node {
-      DocLayoutNode::InBody(_) => {
+      MarkupNode::InBody(_) => {
         // todo: this may not work as expected, as {placeholder} can reside at a table, not in the body
         format!("</w:t></w:r></w:p>{node}<w:p><w:r><w:t>")
       }
-      DocLayoutNode::InParagraph(_) => {
+      MarkupNode::InParagraph(_) => {
         format!("</w:t></w:r>{node}<w:r><w:t>")
       }
-      DocLayoutNode::InRun(_) => {
+      MarkupNode::InRun(_) => {
         format!("</w:t>{node}<w:t>")
       }
     };
@@ -53,8 +54,8 @@ impl<'s> From<&'s str> for Value<'s> {
 }
 
 #[cfg(feature = "docx-rust")]
-impl<'s> From<DocLayoutNode<'_>> for Value<'s> {
-  fn from(value: DocLayoutNode<'_>) -> Self {
+impl<'s> From<MarkupNode<'_>> for Value<'s> {
+  fn from(value: MarkupNode<'_>) -> Self {
     Self::from_layout_node(value)
   }
 }

@@ -2,9 +2,7 @@ use serde_json::json;
 use std::fs::File;
 use std::io::BufWriter;
 
-use docx_template::docx_file::DocxFile;
-use docx_template::docx_template::DocxTemplate;
-use docx_template::transformers::find_and_replace::{Placeholders, Replacements};
+use docx_template::DocxFile;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
   let json = json!({
@@ -20,13 +18,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     "foo":                         "bar",
   });
 
-  let mut template = DocxTemplate {
-    template: DocxFile::from_path("./examples/template/input.docx")?,
-    patterns: Placeholders::from_json_keys_with_brackets("{", "}", &json),
-  };
+  let output = BufWriter::new(File::create("./examples/template/output.docx").unwrap());
 
-  let mut output = BufWriter::new(File::create("./examples/template/output.docx").unwrap());
-  template.render(&mut output, Replacements::from_json(&json))?;
+  DocxFile::from_path("./examples/template/input.docx")?
+    .into_template_having_brackets("{", "}", json)?
+    .render_to(output)?;
 
   Ok(())
 }
