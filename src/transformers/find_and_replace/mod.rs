@@ -22,12 +22,14 @@ mod tests;
 //       let reader = quick_xml::Reader::from_reader(BufReader::new(file));
 //       dbg!(reader.read_event_into(&mut buf));
 
+#[allow(missing_docs)]
 #[derive(Debug, Default, Clone)]
 pub struct FindAndReplace<'r> {
   pub placeholders: Placeholders,
   pub replacements: Replacements<'r>,
 }
 
+#[allow(missing_docs)]
 impl<'subs> FindAndReplace<'subs> {
   pub fn transform_stream<In: AsRef<[u8]>, Out: io::Write>(
     &self,

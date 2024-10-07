@@ -10,6 +10,7 @@ use crate::docx_part::DocxPartType;
 use crate::transformers::find_and_replace::{FindAndReplace, Placeholders, Replacements};
 use crate::zip_file_ext::ZipFileExt;
 
+#[derive(Debug, Clone)]
 /// Builder accumulating all the transformations over `.docx` file.
 pub struct DocxTemplate<'a, R> {
   file: DocxFile<R>,
@@ -19,12 +20,16 @@ pub struct DocxTemplate<'a, R> {
   comments_to_delete: HashSet<&'a str>,
 }
 
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
-pub enum DocxTemplateError {
+pub enum CantRenderError {
+  /// Read/write issues with the zip archive.
   #[error(transparent)]
   ZipErr(#[from] ZipError),
+  /// Could not compile placeholders into an automaton.
   #[error(transparent)]
   AutomatonBuildErr(#[from] BuildError),
+  /// Probably a malformed `.docx` file.
   #[error(transparent)]
   ReadXmlErr(#[from] quick_xml::Error),
 }
@@ -46,13 +51,32 @@ impl<'a, R> DocxTemplate<'a, R> {
   }
 }
 
-impl<R> DocxTemplate<'static, R> {}
-
 impl<R> DocxTemplate<'_, R> {
   /// Create a template to be rendered multiple times.
   ///
   /// In such scenarios it's wise to convert placeholders to an automaton once,
   /// then reuse it between render calls. Paired with [DocxTemplate::replace_placeholders_with].
+  ///
+  /// ```rust
+  /// # use docx_template::{DocxFile, DocxTemplate, Placeholders, Replacements};
+  ///
+  /// let mut template = DocxTemplate::new_with_placeholders(
+  ///   DocxFile::from_path("examples/template/input.docx")?,
+  ///   Placeholders::from_iter(["{name}", "{address}"]),
+  /// );
+  ///
+  /// std::fs::write(
+  ///   "output.docx",
+  ///   template
+  ///     .replace_placeholders_with(Replacements::from_iter([
+  ///       "Alphabet Inc.",
+  ///       "1600 Amphitheatre Parkway in Mountain View, California",
+  ///     ]))
+  ///     .render()?,
+  /// )?;
+  ///
+  /// # Ok::<(), Box<dyn std::error::Error>>(())
+  /// ```
   pub fn new_with_placeholders(file: DocxFile<R>, placeholders: Placeholders) -> Self {
     Self {
       file,
@@ -65,6 +89,7 @@ impl<R> DocxTemplate<'_, R> {
 }
 
 impl<'a, R: Read + Seek> DocxTemplate<'a, R> {
+  /// Set values to be used instead of placeholders. Usually paired with [DocxTemplate::new_with_placeholders].
   pub fn replace_placeholders_with(&mut self, replacements: Replacements<'a>) -> &mut Self {
     self.replacements = Some(replacements);
     self
@@ -77,12 +102,15 @@ impl<'a, R: Read + Seek> DocxTemplate<'a, R> {
   ///
   /// ```rust
   /// # use std::fs::File;
-  /// # use docx_template::{DocxTemplate, DocxFile};
+  /// # use std::error::Error;
+  /// # use std::io::{Read, Seek, Cursor};
+  /// # use docx_template::{DocxTemplate, DocxFile, CantRenderError};
   ///
-  /// # fn generate<R>(template: &mut DocxTemplate<R>) {
+  /// # fn generate<R>(template: &mut DocxTemplate<R>) -> Result<(), Box<dyn Error>> where R: Read + Seek {
   /// template
   ///   .remove_commented_block("{image1}")
   ///   .render_to(File::create("output.docx")?)?;
+  /// # Ok(())
   /// # }
   /// ```
   pub fn remove_commented_block(&mut self, placeholder: &'a str) -> &mut Self {
@@ -98,12 +126,13 @@ impl<'a, R: Read + Seek> DocxTemplate<'a, R> {
   ///
   /// ```rust
   /// # use std::fs::File;
-  /// # use docx_template::{DocxTemplate, DocxFile};
+  /// # use std::io::{Read, Seek};
+  /// # use docx_template::{DocxTemplate, DocxFile, CantRenderError};
   ///
-  /// # fn generate<R>(template: &mut DocxTemplate<R>) {
-  /// template
-  ///   .replace_inner_file("word/media/image1.png", include_bytes!("cat.png"))
-  ///   .render()?;
+  /// # fn generate<R>(template: &mut DocxTemplate<R>) -> Result<(), CantRenderError> where R: Read + Seek {
+  /// let cat = include_bytes!("../examples/image-replacement/cat.jpg");
+  /// template.replace_inner_file("word/media/image1.jpg", cat).render()?;
+  /// # Ok(())
   /// # }
   /// ```
   pub fn replace_inner_file(&mut self, inner_path: &'a str, bytes: &'a [u8]) -> &mut Self {
@@ -113,11 +142,17 @@ impl<'a, R: Read + Seek> DocxTemplate<'a, R> {
 }
 
 impl<R: Read + Seek> DocxTemplate<'_, R> {
-  pub fn render(&mut self) -> Result<Vec<u8>, DocxTemplateError> {
+  /// Render the template applying all the transformations set before.
+  ///
+  /// Returns a byte array, content of a `.docx` file.
+  pub fn render(&mut self) -> Result<Vec<u8>, CantRenderError> {
     self.render_to(Cursor::new(Vec::new())).map(Cursor::into_inner)
   }
 
-  pub fn render_to<W: Write + Seek>(&mut self, writer: W) -> Result<W, DocxTemplateError> {
+  /// Render the template applying all the transformations set before.
+  ///
+  /// Writes the resulting `.docx` bytes to the `writer` stream.
+  pub fn render_to<W: Write + Seek>(&mut self, writer: W) -> Result<W, CantRenderError> {
     let mut result = zip::ZipWriter::new(writer);
 
     let find_and_replace = self
@@ -126,7 +161,7 @@ impl<R: Read + Seek> DocxTemplate<'_, R> {
       .zip(self.replacements.clone())
       .map(|(placeholders, replacements)| FindAndReplace { placeholders, replacements });
 
-    // let _comments = self.extract_comments();
+    // let _comments = self._extract_comments();
 
     for idx in 0..self.file.archive.len() {
       let mut f: ZipFile = self.file.archive.by_index(idx)?;
@@ -158,7 +193,7 @@ impl<R: Read + Seek> DocxTemplate<'_, R> {
 
             find_and_replace
               .transform_stream(buf.as_bytes(), &mut result)
-              .map_err(DocxTemplateError::from)?;
+              .map_err(CantRenderError::from)?;
           } else {
             result.raw_copy_file(f)?;
           }
@@ -170,7 +205,7 @@ impl<R: Read + Seek> DocxTemplate<'_, R> {
   }
 
   #[cfg(feature = "docx-rust")]
-  fn extract_comments(&mut self) -> HashMap<String, isize> {
+  fn _extract_comments(&mut self) -> HashMap<String, isize> {
     let mut part = match self.file.archive.by_name(DocxPartType::comments()) {
       Ok(part) => part,
       Err(_) => return Default::default(),
