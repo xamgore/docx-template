@@ -10,7 +10,9 @@ pub enum DocxPartType {
   Unknown,
 }
 
+#[allow(missing_docs)]
 impl DocxPartType {
+  #[allow(dead_code)]
   pub fn comments() -> &'static str {
     "word/comments.xml"
   }

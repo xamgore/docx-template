@@ -2,13 +2,13 @@ use std::io::Cursor;
 
 use insta::assert_snapshot;
 
-use docx_template::DocxTemplateError;
+use docx_template::CantRenderError;
 use docx_template::{FindAndReplace, Placeholders, Replacements};
 
 #[test]
 fn test() -> Result<(), Box<dyn std::error::Error>> {
   let template = include_bytes!("input.xml");
-  
+
   let placeholders = Placeholders::from_iter_with_brackets(
     "{",
     "}",
@@ -19,7 +19,7 @@ fn test() -> Result<(), Box<dyn std::error::Error>> {
 
   let result = FindAndReplace { placeholders, replacements }
     .transform_stream(template, Cursor::new(Vec::new()))
-    .map_err(DocxTemplateError::from)?
+    .map_err(CantRenderError::from)?
     .into_inner();
 
   let xml = std::str::from_utf8(&result)?;

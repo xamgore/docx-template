@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
+use crate::CantSerializeError;
 use aho_corasick::automaton::Automaton;
 use aho_corasick::{dfa, nfa, BuildError};
 use serde::Serialize;
@@ -69,7 +70,7 @@ impl Placeholders {
   /// Build placeholders from an iterator.
   ///
   /// ```rust
-  ///# use crate::docx_template::transformers::find_and_replace::Placeholders;
+  ///# use crate::docx_template::Placeholders;
   /// Placeholders::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
   /// ```
   #[allow(clippy::should_implement_trait)]
@@ -82,7 +83,7 @@ impl Placeholders {
   /// Build placeholders from an iterator.
   ///
   /// ```rust
-  ///# use crate::docx_template::transformers::find_and_replace::Placeholders;
+  ///# use crate::docx_template::Placeholders;
   /// Placeholders::from_iter_with_brackets("{{", "}}",
   ///   ["id", "price", "consumer_name", "seller_name"]);
   ///
@@ -109,7 +110,7 @@ impl Placeholders {
   /// Derive placeholders from keys of a json object.
   ///
   /// ```rust
-  ///# use docx_template::transformers::find_and_replace::Placeholders;
+  ///# use docx_template::Placeholders;
   /// use serde::Serialize;
   /// use serde_json::json;
   ///
@@ -135,7 +136,7 @@ impl Placeholders {
   /// Derive placeholders from keys of a json object.
   ///
   /// ```rust
-  ///# use docx_template::transformers::find_and_replace::Placeholders;
+  ///# use docx_template::Placeholders;
   /// use serde::Serialize;
   /// use serde_json::json;
   ///
@@ -167,7 +168,7 @@ impl Placeholders {
   /// Derive placeholders from keys of a serializable `struct`.
   ///
   /// ```rust
-  ///# use docx_template::transformers::find_and_replace::Placeholders;
+  ///# use docx_template::Placeholders;
   /// use serde::Serialize;
   ///
   /// #[derive(Default, Serialize)]
@@ -187,14 +188,14 @@ impl Placeholders {
   /// // same as
   /// Placeholders::from_iter(["{{id}}", "{{price}}", "{{consumer_name}}", "{{seller_name}}"]);
   /// ```
-  pub fn from_struct_keys<D: Default + Serialize>() -> Result<Self, serde_json::Error> {
+  pub fn from_struct_keys<D: Default + Serialize>() -> Result<Self, CantSerializeError> {
     Ok(Self::from_json_keys(&serde_json::to_value(D::default())?))
   }
 
   /// Derive placeholders from keys of a serializable `struct`.
   ///
   /// ```rust
-  ///# use docx_template::transformers::find_and_replace::Placeholders;
+  ///# use docx_template::Placeholders;
   /// use serde::Serialize;
   /// use serde_with::with_prefix;
   ///
@@ -224,7 +225,7 @@ impl Placeholders {
   pub fn from_struct_keys_with_brackets<D: Default + Serialize>(
     open_bracket: &str,
     close_bracket: &str,
-  ) -> Result<Self, serde_json::Error> {
+  ) -> Result<Self, CantSerializeError> {
     let json = serde_json::to_value(D::default())?;
     Ok(Self::from_json_keys_with_brackets(open_bracket, close_bracket, &json))
   }

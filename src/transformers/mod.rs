@@ -1,4 +1,4 @@
-use crate::DocxTemplateError;
+use crate::CantRenderError;
 use std::io;
 use thiserror::Error;
 
@@ -13,7 +13,7 @@ pub enum TransformerError {
   ReadXmlErr(#[from] quick_xml::Error),
 }
 
-impl From<TransformerError> for DocxTemplateError {
+impl From<TransformerError> for CantRenderError {
   fn from(value: TransformerError) -> Self {
     match value {
       // probably malformed .docx file
