@@ -1,35 +1,41 @@
-use std::borrow::Cow;
 use itertools::Itertools;
 
 #[cfg(feature = "docx-rust")]
 use crate::markup_node::MarkupNode;
 
+/// A text value or a piece of XML ready to replace a placeholder.
+#[derive(Debug, Default, Clone)]
+pub struct Value(pub(crate) String);
 
-#[derive(Debug, Clone)]
-pub enum Value<'s> {
-  Xml(Cow<'s, str>),
-  // todo: "dynamic values" — functions returning a value, needs real-life use cases though
-  // todo: images, as they require records in index files
-  //       https://web.archive.org/web/20220626225526/http://officeopenxml.com/drwPic-ImageData.php
-  //       and have quite a cumbersome markup
-  //       https://web.archive.org/web/20220627000043/http://officeopenxml.com/drwPic.php
-}
-
-impl<'s> Value<'s> {
-  pub fn from_xml<I: Into<Cow<'s, str>>>(xml: I) -> Self {
-    Self::Xml(xml.into())
+impl Value {
+  #[allow(missing_docs)]
+  pub fn from_xml(xml: impl Into<String>) -> Self {
+    Self(xml.into())
   }
 
+  /// Replaces a placeholder with the text. Each `\n` or `\r\n` symbol forms a new line in the document.
   pub fn from_text(text: &str) -> Self {
-    Self::Xml(Cow::Owned(
+    Self(
       regex!(r#"\r?\n"#) // avoid line break collapse
         .split(text)
         .map(quick_xml::escape::escape)
         .join("</w:t><w:br/><w:t>"),
-    ))
+    )
   }
 
   #[cfg(feature = "docx-rust")]
+  /// Replaces a placeholder with the markup node. Tables or images can be inserted this way.
+  ///
+  /// ```rust
+  /// use docx_rust::document::{Break, BreakType, RunContent};
+  /// use docx_template::{MarkupNode, Replacements, Value};
+  ///
+  /// Replacements::from_slice([
+  ///   Value::from_layout_node(MarkupNode::InRun(
+  ///     RunContent::Break(BreakType::Page.into())
+  ///   ))
+  /// ]);
+  /// ```
   pub fn from_layout_node(node: MarkupNode<'_>) -> Self {
     let xml = match node {
       MarkupNode::InBody(_) => {
@@ -43,41 +49,37 @@ impl<'s> Value<'s> {
         format!("</w:t>{node}<w:t>")
       }
     };
-    Self::Xml(Cow::Owned(xml))
+    Self(xml)
   }
 }
 
-impl<'s> From<&'s str> for Value<'s> {
+impl From<&str> for Value {
   fn from(value: &str) -> Self {
     Self::from_text(value)
   }
 }
 
 #[cfg(feature = "docx-rust")]
-impl<'s> From<MarkupNode<'_>> for Value<'s> {
+impl From<MarkupNode<'_>> for Value {
   fn from(value: MarkupNode<'_>) -> Self {
     Self::from_layout_node(value)
   }
 }
 
-impl<'s> From<serde_json::Value> for Value<'s> {
+impl From<serde_json::Value> for Value {
   fn from(value: serde_json::Value) -> Self {
-    match value {
-      serde_json::Value::Null => Value::Xml(Cow::default()),
-      serde_json::Value::String(v) => Value::from_text(&v),
-      serde_json::Value::Number(v) => Value::from_text(&v.to_string()),
-      _ => unimplemented!(),
-    }
+    Self::from(&value)
   }
 }
 
-impl<'s> From<&'s serde_json::Value> for Value<'s> {
-  fn from(value: &'s serde_json::Value) -> Self {
+impl From<&serde_json::Value> for Value {
+  fn from(value: &serde_json::Value) -> Self {
     match value {
-      serde_json::Value::Null => Value::Xml(Cow::default()),
+      serde_json::Value::Null => Value::from_xml(String::new()),
       serde_json::Value::String(v) => Value::from_text(v.as_str()),
       serde_json::Value::Number(v) => Value::from_text(&v.to_string()),
-      _ => unimplemented!(),
+      _ if cfg!(debug_assertions) => unimplemented!(),
+      _ => Value::from_xml(String::new()),
     }
   }
 }
