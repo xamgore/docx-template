@@ -8,41 +8,42 @@ use std::ops::Index;
 #[derive(Debug, Default, Clone)]
 pub struct Replacements<'a> {
   /// The order is important as indexes are encoded at `Placeholders`' automatons
-  values: Cow<'a, [Value<'a>]>,
+  values: Cow<'a, [Value]>,
 }
 
 impl<'a> Replacements<'a> {
-  pub fn from_slice<I: Into<Cow<'a, [Value<'a>]>>>(slice: I) -> Self {
+  #[allow(missing_docs)]
+  pub fn from_slice<I: Into<Cow<'a, [Value]>>>(slice: I) -> Self {
     Self { values: slice.into() }
   }
 
+  #[allow(missing_docs)]
   #[allow(clippy::should_implement_trait)]
-  pub fn from_iter<V: Into<Value<'a>>, I: IntoIterator<Item = V>>(iter: I) -> Self {
+  pub fn from_iter<V: Into<Value>, I: IntoIterator<Item = V>>(iter: I) -> Self {
     Self { values: iter.into_iter().map(Into::into).collect() }
   }
 
-  pub fn from_json(object: &'a JsonValue) -> Self {
-    debug_assert!(object.is_object(), "pass an object, as placeholders won't be replaced otherwise");
+  #[allow(missing_docs)]
+  pub fn from_json_object_fields(object: &JsonValue) -> Self {
+    debug_assert!(
+      object.is_object(),
+      "pass an object, as placeholders won't be replaced otherwise"
+    );
     match object.as_object() {
       Some(obj) => Self { values: obj.values().map(Value::from).collect() },
       None => Default::default(),
     }
   }
-}
 
-impl Replacements<'static> {
+  #[allow(missing_docs)]
   pub fn try_from_serializable(val: &impl Serialize) -> Result<Self, serde_json::Error> {
     let json = serde_json::to_value(val)?;
-    debug_assert!(json.is_object(), "pass an object, as placeholders won't be replaced otherwise");
-    Ok(match json.as_object() {
-      Some(obj) => Self { values: obj.values().cloned().map(Value::from).collect() },
-      None => Default::default(),
-    })
+    Ok(Self::from_json_object_fields(&json))
   }
 }
 
 impl<'a> Index<usize> for Replacements<'a> {
-  type Output = Value<'a>;
+  type Output = Value;
 
   fn index(&self, index: usize) -> &Self::Output {
     &self.values[index]

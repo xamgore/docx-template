@@ -135,7 +135,7 @@ impl<'subs> FindAndReplace<'subs> {
         out.write_all(&input.as_ref()[reported..(span.start + r#match.start)])?;
 
         let replacement = match &self.replacements[pat_id.as_usize()] {
-          Value::Xml(xml) => xml.as_bytes(),
+          Value(xml) => xml.as_bytes(),
         };
         out.write_all(replacement)?;
         reported = span.start + r#match.end;
