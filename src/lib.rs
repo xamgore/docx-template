@@ -3,13 +3,11 @@
 #![deny(rustdoc::private_intra_doc_links)]
 #![deny(unused_imports)]
 
-#[macro_use]
-mod regex;
-
 mod docx_file;
 mod docx_part;
 mod docx_template;
 mod fmt_to_io_adapter;
+mod iter_tools;
 #[cfg(feature = "docx-rust")]
 mod markup_node;
 pub(crate) mod transformers;
