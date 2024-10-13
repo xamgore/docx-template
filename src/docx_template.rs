@@ -14,7 +14,7 @@ use crate::zip_file_ext::ZipFileExt;
 /// Builder accumulating all the transformations over `.docx` file.
 pub struct DocxTemplate<'a, R> {
   file: DocxFile<R>,
-  placeholders: Option<Placeholders>,
+  placeholders: Placeholders,
   replacements: Option<Replacements<'a>>,
   inner_files_to_replace: HashMap<&'a str, &'a [u8]>,
   comments_to_delete: HashSet<&'a str>,
@@ -43,7 +43,7 @@ impl<'a, R> DocxTemplate<'a, R> {
   ) -> Self {
     Self {
       file,
-      placeholders: Some(placeholders),
+      placeholders,
       replacements: Some(replacements),
       inner_files_to_replace: Default::default(),
       comments_to_delete: Default::default(),
@@ -80,7 +80,7 @@ impl<R> DocxTemplate<'_, R> {
   pub fn new_with_placeholders(file: DocxFile<R>, placeholders: Placeholders) -> Self {
     Self {
       file,
-      placeholders: Some(placeholders),
+      placeholders,
       replacements: None,
       inner_files_to_replace: Default::default(),
       comments_to_delete: Default::default(),
@@ -156,10 +156,9 @@ impl<R: Read + Seek> DocxTemplate<'_, R> {
     let mut result = zip::ZipWriter::new(writer);
 
     let find_and_replace = self
-      .placeholders
+      .replacements
       .clone()
-      .zip(self.replacements.clone())
-      .map(|(placeholders, replacements)| FindAndReplace { placeholders, replacements });
+      .map(|replacements| FindAndReplace { placeholders: self.placeholders.clone(), replacements });
 
     // let _comments = self._extract_comments();
 
