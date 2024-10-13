@@ -40,6 +40,16 @@ impl<'a> Replacements<'a> {
     let json = serde_json::to_value(val)?;
     Ok(Self::from_json_object_fields(&json))
   }
+
+  /// Returns the total number of replacements.
+  pub fn len(&self) -> usize {
+    self.values.len()
+  }
+
+  /// Returns true if there are no replacements.
+  pub fn is_empty(&self) -> bool {
+    self.values.is_empty()
+  }
 }
 
 impl<'a> Index<usize> for Replacements<'a> {
