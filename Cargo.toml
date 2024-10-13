@@ -9,6 +9,15 @@ resolver = "2"
 [[example]]
 name = "image-replacement"
 
+[[example]]
+name = "table-markup"
+
+[[example]]
+name = "template"
+
+[[test]]
+name = "xml-with-placeholders"
+
 [features]
 default = []
 docx-rust = ["dep:docx-rust", "dep:hard-xml"]
