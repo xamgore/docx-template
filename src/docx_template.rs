@@ -103,6 +103,7 @@ impl<'a, R: Read + Seek> DocxTemplate<'a, R> {
     self
   }
 
+  #[doc(hidden)]
   // todo: a screenshot
   /// Encountering a comment with `{placeholder}` content will _delete_ the whole commented block.
   ///
