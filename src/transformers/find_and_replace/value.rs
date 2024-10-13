@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 #[cfg(feature = "docx-rust")]
 use crate::markup_node::MarkupNode;
 
@@ -15,12 +13,8 @@ impl Value {
 
   /// Replaces a placeholder with the text. Each `\n` or `\r\n` symbol forms a new line in the document.
   pub fn from_text(text: &str) -> Self {
-    Self(
-      regex!(r#"\r?\n"#) // avoid line break collapse
-        .split(text)
-        .map(quick_xml::escape::escape)
-        .join("</w:t><w:br/><w:t>"),
-    )
+    let lines = text.lines().map(quick_xml::escape::escape);
+    Self(crate::iter_tools::join(lines, "</w:t><w:br/><w:t>"))
   }
 
   #[cfg(feature = "docx-rust")]

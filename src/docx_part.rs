@@ -23,8 +23,9 @@ impl<S: AsRef<str>> From<S> for DocxPartType {
     match path.as_ref() {
       "word/document.xml" => Self::Main,
       "word/comments.xml" => Self::Comments,
-      path if regex!(r#"word/header[0-9]*.xml"#).is_match(path) => Self::Header,
-      path if regex!(r#"word/footer[0-9]*.xml"#).is_match(path) => Self::Footer,
+      // it's more like "word/header[0-9]*.xml", but regex crate is too heavy here
+      path if path.starts_with(r#"word/header"#) && path.ends_with(".xml") => Self::Header,
+      path if path.starts_with(r#"word/footer"#) && path.ends_with(".xml") => Self::Footer,
       _ => Self::Unknown,
     }
   }
