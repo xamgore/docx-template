@@ -3,6 +3,14 @@ name = "docx-template"
 version = "0.1.0"
 edition = "2021"
 resolver = "2"
+rust-version = "1.74.1" # cargo msrv find
+
+authors = ["Igor Strebz"]
+categories = ["template-engine"]
+description = "Replace {placeholders} and manage content inside DOCX files"
+keywords = ["docx", "template", "word", "openxml"]
+license = "MIT"
+repository = "https://github.com/xamgore/docx-template"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
