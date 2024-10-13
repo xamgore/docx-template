@@ -161,6 +161,11 @@ impl<R: Read + Seek> DocxTemplate<'_, R> {
   /// Render the template applying all the transformations set before.
   ///
   /// Writes the resulting `.docx` bytes to the `writer` stream.
+  ///
+  /// Even though the function accepts generic parameter writer: `W` by value,
+  /// you [may pass] a `&mut writer` reference if necessary.
+  ///
+  /// [may pass]: https://rust-lang.github.io/api-guidelines/interoperability.html#generic-readerwriter-functions-take-r-read-and-w-write-by-value-c-rw-value
   pub fn render_to<W: Write + Seek>(&mut self, writer: W) -> Result<W, CantRenderError> {
     let mut result = zip::ZipWriter::new(writer);
 

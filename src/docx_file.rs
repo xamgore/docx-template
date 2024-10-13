@@ -44,6 +44,11 @@ impl DocxFile<()> {
   /// # .unwrap();
   /// ```
   ///
+  /// Even though the function accepts generic parameter reader: `R` by value,
+  /// you [may pass] a `&mut reader` reference if necessary.
+  ///
+  /// [may pass]: https://rust-lang.github.io/api-guidelines/interoperability.html#generic-readerwriter-functions-take-r-read-and-w-write-by-value-c-rw-value
+  ///
   /// # Errors
   ///
   /// This function will return an error if the document is a malformed zip archive.
