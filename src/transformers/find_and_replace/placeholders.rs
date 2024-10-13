@@ -64,6 +64,16 @@ impl Placeholders {
       Ok(Arc::new(nfa))
     }
   }
+
+  /// Returns the total number of placeholders.
+  pub fn len(&self) -> usize {
+    self.automaton.patterns_len()
+  }
+
+  /// Returns true if there are no placeholders.
+  pub fn is_empty(&self) -> bool {
+    self.len() == 0
+  }
 }
 
 impl Placeholders {

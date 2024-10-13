@@ -36,11 +36,14 @@ pub enum CantRenderError {
 
 impl<'a, R> DocxTemplate<'a, R> {
   /// Create a template to be rendered once.
+  ///
+  /// Placeholders and replacements must have the same length.
   pub fn new(
     file: DocxFile<R>,
     placeholders: Placeholders,
     replacements: Replacements<'a>,
   ) -> Self {
+    debug_assert_eq!(placeholders.len(), replacements.len());
     Self {
       file,
       placeholders,
@@ -89,8 +92,13 @@ impl<R> DocxTemplate<'_, R> {
 }
 
 impl<'a, R: Read + Seek> DocxTemplate<'a, R> {
-  /// Set values to be used instead of placeholders. Usually paired with [DocxTemplate::new_with_placeholders].
+  /// Set values to be used instead of placeholders.
+  ///
+  /// Placeholders and replacements must have the same length.
+  ///
+  /// Usually paired with [DocxTemplate::new_with_placeholders].
   pub fn replace_placeholders_with(&mut self, replacements: Replacements<'a>) -> &mut Self {
+    debug_assert_eq!(self.placeholders.len(), replacements.len());
     self.replacements = Some(replacements);
     self
   }
