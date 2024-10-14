@@ -77,7 +77,7 @@ impl<R> DocxFile<R> {
   ///
   /// DocxFile::from_path("examples/template/input.docx")?
   ///   .into_template(Data { id: 42 })?
-  ///   .render_to(BufWriter::new(File::create("out.docx")?))?;
+  ///   .render_to(BufWriter::new(File::create("output.docx")?))?;
   ///
   /// # Ok::<(), Box<dyn std::error::Error>>(())
   /// ```
@@ -103,7 +103,7 @@ impl<R> DocxFile<R> {
   ///
   /// DocxFile::from_path("examples/template/input.docx")?
   ///   .into_template_having_brackets("{{", "}}", Data { id: 42 })?
-  ///   .render_to(BufWriter::new(File::create("out.docx")?))?;
+  ///   .render_to(BufWriter::new(File::create("output.docx")?))?;
   ///
   /// # Ok::<(), Box<dyn std::error::Error>>(())
   /// ```
