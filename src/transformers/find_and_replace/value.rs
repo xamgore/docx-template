@@ -60,12 +60,14 @@ impl From<MarkupNode<'_>> for Value {
   }
 }
 
+#[cfg(feature = "serde")]
 impl From<serde_json::Value> for Value {
   fn from(value: serde_json::Value) -> Self {
     Self::from(&value)
   }
 }
 
+#[cfg(feature = "serde")]
 impl From<&serde_json::Value> for Value {
   fn from(value: &serde_json::Value) -> Self {
     match value {
