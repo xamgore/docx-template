@@ -1,13 +1,13 @@
 use std::fs::File;
 use std::io::{BufReader, Read, Seek};
 use std::path::Path;
-
-use serde::Serialize;
 use zip::result::ZipError;
 use zip::ZipArchive;
-
-use crate::transformers::find_and_replace::{Placeholders, Replacements};
-use crate::{CantSerializeError, DocxTemplate};
+#[cfg(feature = "serde")]
+use {
+  crate::{CantSerializeError, DocxTemplate, Placeholders, Replacements},
+  serde::Serialize,
+};
 
 /// Docx file is essentially a zip archive containing .xml files and images.
 #[derive(Debug, Clone)]
@@ -62,6 +62,7 @@ impl DocxFile<()> {
   }
 }
 
+#[cfg(feature = "serde")]
 impl<R> DocxFile<R> {
   /// A shortcut method for converting the `.docx` file into a template having `{placeholders}`.
   ///

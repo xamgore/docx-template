@@ -1,10 +1,10 @@
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
-use crate::CantSerializeError;
 use aho_corasick::automaton::Automaton;
 use aho_corasick::{dfa, nfa, BuildError};
-use serde::Serialize;
+#[cfg(feature = "serde")]
+use {crate::CantSerializeError, serde::Serialize};
 
 /// Is used to pattern match `{placeholders}` against the incoming stream of bytes.
 ///
@@ -116,7 +116,10 @@ impl Placeholders {
     });
     Self::from_iter(placeholders)
   }
+}
 
+#[cfg(feature = "serde")]
+impl Placeholders {
   /// Derive placeholders from keys of a json object.
   ///
   /// ```rust
@@ -247,12 +250,14 @@ impl<A: AsRef<[u8]>> FromIterator<A> for Placeholders {
   }
 }
 
+#[cfg(feature = "serde")]
 impl<'a> From<&'a serde_json::Value> for Placeholders {
   fn from(value: &'a serde_json::Value) -> Self {
     Placeholders::from_json_keys(value)
   }
 }
 
+#[cfg(feature = "serde")]
 impl<'a> From<&'a serde_json::Map<String, serde_json::Value>> for Placeholders {
   fn from(map: &'a serde_json::Map<String, serde_json::Value>) -> Self {
     Placeholders::from_iter(map.keys())
