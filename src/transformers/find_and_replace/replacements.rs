@@ -1,5 +1,7 @@
 use super::value::Value;
+#[cfg(feature = "serde")]
 use serde::Serialize;
+#[cfg(feature = "serde")]
 use serde_json::Value as JsonValue;
 use std::borrow::Cow;
 use std::ops::Index;
@@ -22,7 +24,10 @@ impl<'a> Replacements<'a> {
   pub fn from_iter<V: Into<Value>, I: IntoIterator<Item = V>>(iter: I) -> Self {
     Self { values: iter.into_iter().map(Into::into).collect() }
   }
+}
 
+#[cfg(feature = "serde")]
+impl<'a> Replacements<'a> {
   #[allow(missing_docs)]
   pub fn from_json_object_fields(object: &JsonValue) -> Self {
     debug_assert!(
@@ -40,7 +45,9 @@ impl<'a> Replacements<'a> {
     let json = serde_json::to_value(val)?;
     Ok(Self::from_json_object_fields(&json))
   }
+}
 
+impl<'a> Replacements<'a> {
   /// Returns the total number of replacements.
   pub fn len(&self) -> usize {
     self.values.len()
