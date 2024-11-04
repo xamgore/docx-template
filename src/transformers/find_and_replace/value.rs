@@ -1,5 +1,7 @@
+#[cfg(feature = "docx-rs")]
+use crate::DocxRsMarkupNode;
 #[cfg(feature = "docx-rust")]
-use crate::markup_node::MarkupNode;
+use crate::DocxRustMarkupNode;
 
 /// A text value or a piece of XML ready to replace a placeholder.
 #[derive(Debug, Default, Clone)]
@@ -18,28 +20,74 @@ impl Value {
   }
 
   #[cfg(feature = "docx-rust")]
-  /// Replaces a placeholder with the markup node. Tables or images can be inserted this way.
+  /// Replaces a placeholder with the markup node. Tables and images can be inserted this way.
+  ///
+  /// Be careful with reference ids, as they must not intersect with those already in the doc.
+  ///
+  /// Some markup nodes require storing _index_ information in a separate file of a `.docx` archive.
+  /// Like images or comments. So it's easier to replace an already existing image, than to insert one.
+  ///
+  /// If you see how this can be simplified, feel free to [open an issue](https://github.com/xamgore/docx-template/issues/new).
   ///
   /// ```rust
   /// use docx_rust::document::{Break, BreakType, RunContent};
-  /// use docx_template::{MarkupNode, Replacements, Value};
+  /// use docx_template::{DocxRustMarkupNode, Replacements, Value};
   ///
   /// Replacements::from_slice([
-  ///   Value::from_layout_node(MarkupNode::InRun(
+  ///   Value::from_docx_rust_markup_node(DocxRustMarkupNode::InRun(
   ///     RunContent::Break(BreakType::Page.into())
   ///   ))
   /// ]);
   /// ```
-  pub fn from_layout_node(node: MarkupNode<'_>) -> Self {
+  pub fn from_docx_rust_markup_node(node: DocxRustMarkupNode<'_>) -> Self {
     let xml = match node {
-      MarkupNode::InBody(_) => {
+      DocxRustMarkupNode::InBody(_) => {
         // todo: this may not work as expected, as {placeholder} can reside at a table, not in the body
         format!("</w:t></w:r></w:p>{node}<w:p><w:r><w:t>")
       }
-      MarkupNode::InParagraph(_) => {
+      DocxRustMarkupNode::InParagraph(_) => {
         format!("</w:t></w:r>{node}<w:r><w:t>")
       }
-      MarkupNode::InRun(_) => {
+      DocxRustMarkupNode::InRun(_) => {
+        format!("</w:t>{node}<w:t>")
+      }
+    };
+    Self(xml)
+  }
+
+  #[cfg(feature = "docx-rs")]
+  /// Replaces a placeholder with the markup node. Tables and images can be inserted this way.
+  ///
+  /// Be careful with reference ids, as they must not intersect with those already in the doc.
+  /// `docx_rs` has several internal counters that are incremented each time a paragraph
+  /// or another markup node is created. So it's better to avoid those counters,
+  /// setting all the ids fields yourself.
+  ///
+  /// Some markup nodes require storing _index_ information in a separate file of a `.docx` archive.
+  /// Like images or comments. So it's easier to replace an already existing image, than to insert one.
+  ///
+  /// If you see how this can be simplified, feel free to [open an issue](https://github.com/xamgore/docx-template/issues/new).
+  ///
+  /// ```rust
+  /// use docx_rs::{Break, BreakType, RunChild};
+  /// use docx_template::{DocxRsMarkupNode, Replacements, Value};
+  ///
+  /// Replacements::from_slice([
+  ///   Value::from_docx_rs_markup_node(DocxRsMarkupNode::InRun(
+  ///     RunChild::Break(Break::new(BreakType::Page))
+  ///   ))
+  /// ]);
+  /// ```
+  pub fn from_docx_rs_markup_node(node: DocxRsMarkupNode) -> Self {
+    let xml = match node {
+      DocxRsMarkupNode::InBody(_) => {
+        // todo: this may not work as expected, as {placeholder} can reside at a table, not in the body
+        format!("</w:t></w:r></w:p>{node}<w:p><w:r><w:t>")
+      }
+      DocxRsMarkupNode::InParagraph(_) => {
+        format!("</w:t></w:r>{node}<w:r><w:t>")
+      }
+      DocxRsMarkupNode::InRun(_) => {
         format!("</w:t>{node}<w:t>")
       }
     };
@@ -54,9 +102,16 @@ impl From<&str> for Value {
 }
 
 #[cfg(feature = "docx-rust")]
-impl From<MarkupNode<'_>> for Value {
-  fn from(value: MarkupNode<'_>) -> Self {
-    Self::from_layout_node(value)
+impl From<DocxRustMarkupNode<'_>> for Value {
+  fn from(value: DocxRustMarkupNode<'_>) -> Self {
+    Self::from_docx_rust_markup_node(value)
+  }
+}
+
+#[cfg(feature = "docx-rs")]
+impl From<DocxRsMarkupNode> for Value {
+  fn from(value: DocxRsMarkupNode) -> Self {
+    Self::from_docx_rs_markup_node(value)
   }
 }
 

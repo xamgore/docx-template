@@ -8,7 +8,7 @@ mod docx_part;
 mod docx_template;
 mod fmt_to_io_adapter;
 mod iter_tools;
-#[cfg(feature = "docx-rust")]
+#[cfg(any(feature = "docx-rs", feature = "docx-rust"))]
 mod markup_node;
 pub(crate) mod transformers;
 mod zip_file_ext;
@@ -18,8 +18,11 @@ pub use docx_file::DocxFile;
 #[doc(inline)]
 pub use docx_template::{CantRenderError, DocxTemplate};
 #[doc(inline)]
+#[cfg(feature = "docx-rs")]
+pub use markup_node::docx_rs::DocxRsMarkupNode;
+#[doc(inline)]
 #[cfg(feature = "docx-rust")]
-pub use markup_node::MarkupNode;
+pub use markup_node::docx_rust::DocxRustMarkupNode;
 #[doc(hidden)]
 pub use transformers::find_and_replace::FindAndReplace;
 #[doc(inline)]
