@@ -22,10 +22,26 @@ mod tests;
 //       let reader = quick_xml::Reader::from_reader(BufReader::new(file));
 //       dbg!(reader.read_event_into(&mut buf));
 
-#[allow(missing_docs)]
+/// Pipes the input stream to the output stream. If text patterns (placeholders) are matched,
+/// they will be replaced according to the `replacements` list.
+///
+/// A placeholder can reside in more than one `<w:run>`. This transformer replaces the first bit
+/// and erases the rest. Each paragraph is transformed individually to prevent odd cases.
+///
+/// ```xml
+/// <w:run>{place</w:run><w:run>holder}</w:run>
+/// <w:run>🦀</w:run><w:run></w:run>
+/// ```
+/// The algorithm reads paragraphs one by one, accumulating a list of text spans met.
+/// At the end of each paragraph the text is fed to an automaton, which halts when
+/// any of the patterns was read. Then series of XML markups from between the placeholder's bits
+/// like `</w:run><w:run>` are pushed to the output stream, interspersed with either
+/// the corresponding `replacement` string (first bit), or an empty string (the rest bits).
 #[derive(Debug, Default, Clone)]
 pub struct FindAndReplace<'r> {
+  #[allow(missing_docs)]
   pub placeholders: Placeholders,
+  #[allow(missing_docs)]
   pub replacements: Replacements<'r>,
 }
 
