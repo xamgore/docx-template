@@ -39,8 +39,9 @@ pub fn table() -> Table {
   ];
 
   Table::new(
+    // header + content + summary footer
     once(Item::header())
-      .chain(data.iter().enumerate().map(|(idx, it)| it.to_row(idx)))
+      .chain(data.iter().enumerate().map(|(idx, it)| it.to_row(1 + idx)))
       .chain(once(Item::summary(&data)))
       .collect(),
   )
