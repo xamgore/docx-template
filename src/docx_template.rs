@@ -177,7 +177,7 @@ impl<R: Read + Seek> DocxTemplate<'_, R> {
     // let _comments = self._extract_comments();
 
     for idx in 0..self.file.archive.len() {
-      let mut f: ZipFile = self.file.archive.by_index(idx)?;
+      let mut f: ZipFile<R> = self.file.archive.by_index(idx)?;
 
       if let Some(&buffer) = self.inner_files_to_replace.get(f.name()) {
         // declare a file

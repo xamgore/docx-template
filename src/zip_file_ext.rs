@@ -1,3 +1,4 @@
+use std::io::Read;
 use zip::read::ZipFile;
 use zip::write::{FileOptions, SimpleFileOptions};
 use zip::DateTime;
@@ -9,7 +10,7 @@ where
   fn to_options(&self) -> FileOptions<()>;
 }
 
-impl<'a> ZipFileExt for ZipFile<'a> {
+impl<'a, R: Read> ZipFileExt for ZipFile<'a, R> {
   /// `zip` package does not provide a way to copy a file header from another archive,
   /// that's why we do it manually. Implementation is based on
   /// [ZipWriter::raw_copy_file_rename](zip::ZipWriter::raw_copy_file_rename) method.
